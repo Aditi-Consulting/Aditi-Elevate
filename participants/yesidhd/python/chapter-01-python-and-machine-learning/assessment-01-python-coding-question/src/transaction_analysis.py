@@ -3,8 +3,10 @@
 Provides a function that summarizes a list of transaction amounts:
 total, average, maximum transaction, and the number of transactions
 above the average. Empty input is handled explicitly.
+
 """
 
+from decimal import Decimal
 from typing import List
 
 
@@ -17,14 +19,17 @@ def analyze_transactions(amounts: List[float]) -> dict:
             "above_average_count": 0,
         }
 
-    total = sum(amounts)
-    average = total / len(amounts)
+    exact_amounts = [Decimal(str(amount)) for amount in amounts]
+    exact_total = sum(exact_amounts, Decimal("0"))
+    exact_average = exact_total / len(amounts)
 
     return {
-        "total": total,
-        "average": average,
+        "total": float(exact_total),
+        "average": float(exact_average),
         "max": max(amounts),
-        "above_average_count": sum(1 for amount in amounts if amount > average),
+        "above_average_count": sum(
+            1 for amount in exact_amounts if amount > exact_average
+        ),
     }
 
 

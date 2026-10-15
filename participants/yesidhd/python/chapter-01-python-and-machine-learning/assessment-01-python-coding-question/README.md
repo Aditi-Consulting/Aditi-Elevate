@@ -31,11 +31,15 @@ The function must handle an empty list.
   `average`, `None` for `max` (there is no transaction), and `0` for
   `above_average_count`.
 - "Above the average" is interpreted as strictly greater than the average, so
-  transactions equal to the average are not counted.
+  transactions equal to the average are not counted. To avoid float rounding
+  miscounting amounts equal to the mean (e.g. `[0.7, 0.7, 0.7]`), the total,
+  average, and comparisons use exact decimal arithmetic; the reported
+  `total` and `average` are floats converted from those exact results.
 - The module also includes a `main()` demo that runs the function on sample
   data and prints the results, including the empty-list case.
 - Tests in `tests/test_transaction_analysis.py` cover the typical case, the
-  empty list, a single transaction, all-equal amounts, and negative amounts,
+  empty list, a single transaction, all-equal amounts (integers and
+  fractions), and negative amounts,
   using only the standard-library `unittest` framework.
 
 ## Setup
@@ -57,7 +61,7 @@ python3 -m unittest discover -s tests -v
 
 ## Validation and results
 
-Executed `python3 -m unittest discover -s tests -v` — all 6 tests pass.
+Executed `python3 -m unittest discover -s tests -v` — all 7 tests pass.
 Executed `python3 src/transaction_analysis.py` — sample output:
 
 ```text

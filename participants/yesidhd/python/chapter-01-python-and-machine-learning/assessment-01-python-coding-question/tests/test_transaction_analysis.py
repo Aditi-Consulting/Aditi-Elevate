@@ -40,6 +40,16 @@ class TestAnalyzeTransactions(unittest.TestCase):
         self.assertEqual(results["max"], 50)
         self.assertEqual(results["above_average_count"], 0)
 
+    def test_all_equal_fractional_amounts(self):
+        # Regression: float arithmetic makes sum([0.7, 0.7, 0.7]) come out
+        # as 2.0999999999999996, so a float mean is below 0.7 and would
+        # count every transaction as above average instead of none.
+        results = analyze_transactions([0.7, 0.7, 0.7])
+        self.assertEqual(results["total"], 2.1)
+        self.assertEqual(results["average"], 0.7)
+        self.assertEqual(results["max"], 0.7)
+        self.assertEqual(results["above_average_count"], 0)
+
     def test_all_above_average_except_one(self):
         # Average is 82.75, so 100, 110, and 120 are all above it.
         results = analyze_transactions([1, 100, 110, 120])
