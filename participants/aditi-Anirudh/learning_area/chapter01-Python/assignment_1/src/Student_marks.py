@@ -10,13 +10,13 @@ class Student:
         if marks < 0 or marks > 100:
             raise ValueError("Marks should be between 0 and 100")
 
-        Student.student_data[name] = marks
+        Student.student_data[name] = {"marks": marks, "grade": None}
 
     def _get_mark(self, name):
         '''
         Helper method to retrieve the marks for a given student name.
         '''
-        return Student.student_data.get(name)
+        return Student.student_data.get(name, {}).get("marks")
 
     def calculate_total_and_average(self):
         '''
@@ -25,7 +25,7 @@ class Student:
         if not Student.student_data:
             return 0, 0
 
-        total = sum(Student.student_data[name] for name in Student.student_data)
+        total = sum(self._get_mark(name) for name in Student.student_data)
         average = total / len(Student.student_data)
         return total, average
 

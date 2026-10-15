@@ -13,8 +13,8 @@ class TestStudent(unittest.TestCase):
         Test adding a student with valid marks.
         '''
         self.student.add_student("Alice", 85)
-        self.assertIn("Alice", self.student.students)
-        self.assertEqual(self.student.students["Alice"], 85)
+        self.assertIn("Alice", self.student.student_data)
+        self.assertEqual(self.student.student_data["Alice"], 85)
 
     def test_add_student_invalid_marks(self):
         '''
@@ -49,6 +49,6 @@ class TestStudent(unittest.TestCase):
         self.student.add_student("Alice", 85)
         self.student.add_student("Bob", 90)
         self.student.assign_grade()
-        self.assertEqual(self.student.students["Alice"]["grade"], 'F')
-        self.assertEqual(self.student.students["Bob"]["grade"], 'P')
+        self.assertEqual(self.student.student_data["Alice"]["grade"], 'F')
+        self.assertEqual(self.student.student_data["Bob"]["grade"], 'P')
     

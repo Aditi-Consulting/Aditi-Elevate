@@ -17,4 +17,4 @@ def files_lines_count(file_path):
     except Exception as e:
         print(f"An error occurred: {e}")
         return 0
-print(files_lines_count("text1.txt"))
+print(files_lines_count("text.txt"))
