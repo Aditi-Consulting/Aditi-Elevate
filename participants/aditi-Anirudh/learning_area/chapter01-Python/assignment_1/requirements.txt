@@ -1,2 +1,0 @@
-# No external dependencies are required for this assignment.
-# This project uses only Python's built-in unittest module.
