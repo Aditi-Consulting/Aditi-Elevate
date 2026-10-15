@@ -28,15 +28,8 @@ jobs:
           ref: main
           persist-credentials: false
       - run: python3 -m unittest discover -s automation/tests
-      - run: python3 automation/ai_review.py
+      - run: python3 automation/copilot_review.py
         env:
           GH_TOKEN: ${{ github.token }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          OPENAI_MODEL: ${{ vars.ELEVATE_REVIEW_MODEL }}
           REQUIRED_CHECKS: ${{ vars.ELEVATE_REQUIRED_CHECKS }}
-          COORDINATOR_EMAIL: anjali.bhardwaj@aditiconsulting.com
-          SMTP_HOST: ${{ vars.ELEVATE_SMTP_HOST }}
-          SMTP_PORT: ${{ vars.ELEVATE_SMTP_PORT || '587' }}
-          SMTP_FROM: ${{ vars.ELEVATE_SMTP_FROM }}
-          SMTP_USERNAME: ${{ secrets.ELEVATE_SMTP_USERNAME }}
-          SMTP_PASSWORD: ${{ secrets.ELEVATE_SMTP_PASSWORD }}
+          COORDINATOR: AniiBee25
