@@ -28,7 +28,7 @@ and constructive improvements. The assistant accepts a structured report only fr
 Copilot's bot review for the current commit. It checks the source quote against
 the referenced PR, requires every criterion to pass, checks structure/README,
 checks CI and unresolved conversations, and requires an actual APPROVED review
-before notifying Anjali of clearance. It never manufactures approval from silence
+before attempting a merge and notifying Anjali of completion. It never manufactures approval from silence
 or positive prose. Native Copilot approvals do not guarantee the handoff checks
 pass; Anjali should use the latest assessment status before unblocking anyone.
 
@@ -62,7 +62,37 @@ main before it can be dispatched; running the script locally is a separate opera
 Notifications are deduplicated by revision, review ID, readiness and PR body.
 Writes and review changes are not transactional; always verify current status.
 Source questions and model-derived rubric coverage still require maintainer audit.
-This workflow does not merge PRs or unlock the learning platform.
+The workflow merges eligible assessment PRs, closing them automatically. Anjali still unlocks the learning platform.
 
 References: [Copilot review and approval](https://docs.github.com/en/copilot/how-tos/use-copilot-agents/use-code-review),
 [GitHub notifications](https://docs.github.com/en/subscriptions-and-notifications/concepts/about-notifications).
+
+
+## Merge and reporting policy
+
+The workflow runs with `--merge-approved` and contents-write permission. A local
+run must also supply `--merge-approved` to perform merges. Dry run never writes or
+merges, even if that flag is supplied.
+
+A passing current-commit Copilot approval and complete rubric are required, along
+with CI success, resolved review feedback and correct submission structure. The
+assistant rechecks these gates immediately before a SHA-bound squash merge. GitHub
+must report a clean, mergeable PR, and existing repository rules remain in effect.
+Squash merging must be enabled. Unknown mergeability, stale commits, revoked
+approvals, conflicts or rejected API requests keep the PR open for attention.
+
+Every changed path, including rename origins, must belong to the PR author's
+`participants/<github-username>/<learning-area>/<chapter>/<assessment>/` folder.
+The merge preserves these paths on main; it does not move files or modify another
+participant's folder. Wrongly located submissions must be corrected and reviewed
+again before merging. Branches are retained for traceability.
+
+Reports show participant, assignment, revision, folder links, decision, required
+actions, grading evidence, linked code findings and optional improvements. Each
+coordinator notice links to the full report and states whether the next stage may
+be unblocked. Only a confirmed successful merge produces a completion notice,
+including the merge commit and a stable link to the participant's merged folder.
+
+GitHub merge and comment publication are separate operations. If a comment request
+fails after a successful merge, maintainers must confirm the merge and publish the
+handoff manually; a failed notification never rolls back committed work.

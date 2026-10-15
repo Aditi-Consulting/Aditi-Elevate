@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pull-requests: write
   checks: read
   statuses: read
@@ -28,7 +28,7 @@ jobs:
           ref: main
           persist-credentials: false
       - run: python3 -m unittest discover -s automation/tests
-      - run: python3 automation/copilot_review.py
+      - run: python3 automation/copilot_review.py --merge-approved
         env:
           GH_TOKEN: ${{ github.token }}
           REQUIRED_CHECKS: ${{ vars.ELEVATE_REQUIRED_CHECKS }}

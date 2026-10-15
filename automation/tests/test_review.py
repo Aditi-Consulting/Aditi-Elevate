@@ -54,6 +54,96 @@ class Tests(unittest.TestCase):
         with patch.dict('os.environ', {'REQUIRED_CHECKS': 'trusted-tests'}):
             self.assertFalse(checks_pass(API(), 'abc'))
 
+from automation.copilot_review import merge_approved, render_report
+
+
+class MergeAPI:
+    repo = 'org/repo'
+
+    def __init__(self):
+        self.pr = {'number': 4, 'head': {'sha': 'reviewed'}, 'body': REPORT['question_quote'],
+                   'user': {'login': 'student'}, 'title': 'Transactions', 'state': 'open',
+                   'draft': False, 'base': {'ref': 'main'}, 'mergeable': True,
+                   'mergeable_state': 'clean', 'changed_files': 1}
+        self.review = {'id': 10, 'user': {'login': 'copilot-pull-request-reviewer[bot]', 'type': 'Bot'},
+                       'state': 'APPROVED', 'commit_id': 'reviewed', 'html_url': 'https://github.com/org/repo/pull/4#review',
+                       'body': '```elevate-report\n' + json.dumps(REPORT) + '\n```'}
+        self.files = [{'filename': 'participants/student/python/chapter-01-basics/assessment-01-test/main.py', 'status': 'added'}]
+        self.writes = []
+        self.result = {'merged': True, 'sha': 'mergedcommit'}
+        self.unresolved_threads = False
+
+    def get(self, path):
+        return self.pr
+
+    def pages(self, path):
+        return self.files if path.endswith('/files') else [self.review]
+
+    def unresolved(self, number):
+        return self.unresolved_threads
+
+    def request(self, path, data, method):
+        self.writes.append((path, data, method))
+        return self.result
+
+
+class MergeTests(unittest.TestCase):
+    def run_merge(self, api, original=None, ci=True):
+        with patch('automation.copilot_review.checks_pass', return_value=ci):
+            return merge_approved(api, original or dict(api.pr), api.review, REPORT)
+
+    def test_merge_is_bound_to_reviewed_sha(self):
+        api = MergeAPI()
+        self.assertEqual(self.run_merge(api)[0], 'mergedcommit')
+        self.assertEqual(api.writes[0][1]['sha'], 'reviewed')
+        self.assertEqual(api.writes[0][1]['merge_method'], 'squash')
+
+    def test_new_commit_cannot_merge(self):
+        api = MergeAPI()
+        self.assertIsNone(self.run_merge(api, dict(api.pr, head={'sha': 'old'}))[0])
+        self.assertEqual(api.writes, [])
+
+    def test_other_participant_or_rename_origin_cannot_merge(self):
+        for change in [{'filename': 'participants/other/python/chapter-01-basics/assessment-01-test/main.py'},
+                       {'previous_filename': 'README.md'}]:
+            api = MergeAPI()
+            api.files[0].update(change)
+            self.assertIsNone(self.run_merge(api)[0])
+            self.assertEqual(api.writes, [])
+
+    def test_failed_checks_or_unresolved_threads_block(self):
+        api = MergeAPI()
+        self.assertIsNone(self.run_merge(api, ci=False)[0])
+        api.unresolved_threads = True
+        self.assertIsNone(self.run_merge(api)[0])
+        self.assertEqual(api.writes, [])
+
+    def test_revoked_approval_and_branch_rules_block(self):
+        for change in ['approval', 'rules']:
+            api = MergeAPI()
+            if change == 'approval':
+                api.review['state'] = 'DISMISSED'
+            else:
+                api.pr['mergeable_state'] = 'blocked'
+            self.assertIsNone(self.run_merge(api)[0])
+            self.assertEqual(api.writes, [])
+
+    def test_unconfirmed_merge_is_not_success(self):
+        api = MergeAPI()
+        api.result = {'merged': False}
+        self.assertIsNone(self.run_merge(api)[0])
+
+    def test_report_distinguishes_waiting_from_merged(self):
+        api = MergeAPI()
+        args = (api, api.pr, {'participants/student/python/chapter-01-basics/assessment-01-test'}, api.review, REPORT, [], True, [])
+        pending = render_report(*args)
+        merged = render_report(*args, merged_sha='mergedcommit')
+        self.assertIn('wait for the merged confirmation', pending)
+        self.assertNotIn('Unblock the next learning stage', pending)
+        self.assertIn('Merged — assessment complete', merged)
+        self.assertIn('/tree/mergedcommit/participants/student/', merged)
+        self.assertIn('| Requirement | Result | Evidence |', merged)
+
 
 if __name__ == '__main__':
     unittest.main()
