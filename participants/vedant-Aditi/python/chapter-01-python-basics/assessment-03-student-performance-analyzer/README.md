@@ -61,7 +61,7 @@ Decimal averages are handled using the same boundaries. For example, 89.5 receiv
 
 - The student count must be a positive integer.
 - Student names cannot be empty.
-- Marks must be numeric values between 0 and 100, inclusive.
+- Marks must be finite numeric values between 0 and 100, inclusive; NaN and positive or negative infinity are rejected.
 - Invalid input is rejected with an error message, and the program asks again instead of crashing.
 - Empty mark lists return an average of `0`.
 - Empty student lists return no top student and generate the message `No student records available.`
@@ -93,6 +93,7 @@ The test suite checks:
 - average calculation, including decimal averages
 - grade boundaries
 - invalid marks
+- non-finite marks and mark validation reprompting
 - highest-performing student selection
 - tie handling
 - empty input behavior

@@ -1,3 +1,6 @@
+import math
+
+
 NUMBER_OF_SUBJECTS = 3
 
 
@@ -32,8 +35,11 @@ def validate_mark(mark):
     """Convert a mark to a number and validate that it is between 0 and 100."""
     try:
         numeric_mark = float(mark)
-    except ValueError as error:
+    except (TypeError, ValueError) as error:
         raise ValueError("Mark must be a number.") from error
+
+    if not math.isfinite(numeric_mark):
+        raise ValueError("Mark must be a finite number.")
 
     if numeric_mark < 0 or numeric_mark > 100:
         raise ValueError("Mark must be between 0 and 100.")

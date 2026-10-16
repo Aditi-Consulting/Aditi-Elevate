@@ -1,6 +1,7 @@
 import os
 import sys
 import unittest
+from unittest.mock import patch
 
 
 CURRENT_DIR = os.path.dirname(__file__)
@@ -13,6 +14,7 @@ from main import (
     calculate_average,
     calculate_total,
     find_top_student,
+    get_mark,
     generate_report,
     validate_mark,
 )
@@ -39,14 +41,33 @@ class TestStudentPerformanceAnalyzer(unittest.TestCase):
     def test_validate_mark_accepts_valid_numeric_values(self):
         self.assertEqual(validate_mark("95"), 95)
         self.assertEqual(validate_mark("82.5"), 82.5)
+        self.assertEqual(validate_mark(0), 0)
+        self.assertEqual(validate_mark(100), 100)
 
     def test_validate_mark_rejects_invalid_values(self):
-        invalid_marks = ["-1", "101", "abc"]
+        invalid_marks = [
+            float("nan"),
+            "nan",
+            float("inf"),
+            float("-inf"),
+            "-1",
+            "101",
+            "abc",
+        ]
 
         for mark in invalid_marks:
             with self.subTest(mark=mark):
                 with self.assertRaises(ValueError):
                     validate_mark(mark)
+
+    @patch("builtins.input", side_effect=["nan", "inf", "-inf", "90"])
+    @patch("builtins.print")
+    def test_get_mark_reprompts_until_mark_is_finite_and_in_range(
+        self, mock_print, mock_input
+    ):
+        self.assertEqual(get_mark("Enter mark: "), 90)
+        self.assertEqual(mock_input.call_count, 4)
+        self.assertEqual(mock_print.call_count, 3)
 
     def test_find_top_student(self):
         students = [
