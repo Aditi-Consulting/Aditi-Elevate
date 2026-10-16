@@ -1,0 +1,35 @@
+name: Assessment review assistant
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review, edited]
+    branches: [main]
+  schedule:
+    - cron: '7,22,37,52 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  checks: read
+  statuses: read
+
+concurrency:
+  group: assessment-review-assistant
+  cancel-in-progress: false
+
+jobs:
+  elevate-ai-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      # Only trusted main code runs with the write token. Never execute PR code here.
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: main
+          persist-credentials: false
+      - run: python3 -m unittest discover -s automation/tests
+      - run: python3 automation/copilot_review.py --merge-approved
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUIRED_CHECKS: ${{ vars.ELEVATE_REQUIRED_CHECKS }}
+          COORDINATOR: AniiBee25
