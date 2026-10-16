@@ -9,7 +9,7 @@ def vowels_count(string):
     int: The number of vowels in the string.
     """
     if not isinstance(string, str):
-        raise ValueError("Input must be a string.")
+        return 0
     try:
         str_lower = string.lower()
         vowels = "aeiouAEIOU"
