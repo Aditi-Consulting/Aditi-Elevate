@@ -1,0 +1,13 @@
+# Bot policy changes require approval from either program owner.
+/.github/ @Siddharthas-Aditi @AniiBee25
+/automation/ @Siddharthas-Aditi @AniiBee25
+/README.md @Siddharthas-Aditi @AniiBee25
+/participants/README.md @Siddharthas-Aditi @AniiBee25
+**/CODEOWNERS @Siddharthas-Aditi @AniiBee25
+**/AGENTS.md @Siddharthas-Aditi @AniiBee25
+**/CLAUDE.md @Siddharthas-Aditi @AniiBee25
+**/GEMINI.md @Siddharthas-Aditi @AniiBee25
+**/REVIEW.md @Siddharthas-Aditi @AniiBee25
+**/SKILL.md @Siddharthas-Aditi @AniiBee25
+**/*.instructions.md @Siddharthas-Aditi @AniiBee25
+**/copilot-instructions.md @Siddharthas-Aditi @AniiBee25
