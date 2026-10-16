@@ -58,6 +58,15 @@ from automation.copilot_review import merge_approved, render_report
 
 
 class PracticalPolicyTests(unittest.TestCase):
+    def test_nested_policy_files_cannot_be_auto_merged(self):
+        for name in ['AGENTS.md', 'SKILL.md', 'copilot-instructions.md', 'review.instructions.md', '.github/config.yml']:
+            files = [{'filename': 'participants/student/task/' + name, 'status': 'added'}]
+            self.assertTrue(inspect_paths(files, 'student')[0])
+
+    def test_renamed_policy_file_remains_protected(self):
+        files = [{'filename': 'participants/student/task/notes.md', 'status': 'renamed',
+                  'previous_filename': 'participants/student/task/AGENTS.md'}]
+        self.assertTrue(inspect_paths(files, 'student')[0])
     def test_optional_failures_do_not_block(self):
         advisory = {'requirement': 'Type annotations', 'result': 'fail', 'evidence': 'Optional', 'blocking': False}
         report = dict(REPORT, criteria=REPORT['criteria'] + [advisory])

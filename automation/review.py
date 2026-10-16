@@ -77,6 +77,9 @@ def inspect_paths(files, author):
             paths.append(file['previous_filename'])
         for path in paths:
             parts = path.split('/')
+            if (parts[-1] in {'CODEOWNERS', 'AGENTS.md', 'CLAUDE.md', 'GEMINI.md', 'REVIEW.md', 'SKILL.md', 'copilot-instructions.md'}
+                    or parts[-1].endswith('.instructions.md') or '.github' in parts):
+                issues.add('Bot/instruction changes require Siddharthas-Aditi or AniiBee25 review and cannot be auto-merged as an assessment.')
             if len(parts) < 3 or parts[0] != 'participants' or parts[1].lower() != author.lower():
                 issues.add('Keep all changes within your own assessment folder under participants/<github-username>/.')
                 continue
