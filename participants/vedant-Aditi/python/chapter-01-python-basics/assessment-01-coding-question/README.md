@@ -34,7 +34,7 @@ From the assessment directory, run python src/main.py, then enter sample.txt whe
 ## Validation and Results
 
 - When provided with `sample.txt`, the program prints `Total lines : 4`.
-- When provided with a nonexistent filename, the program prints an error message indicating that the file does not exist or is not accessible.## Validation and Results
+- When provided with a nonexistent filename, the program prints an error message indicating that the file does not exist.
 
 
 
