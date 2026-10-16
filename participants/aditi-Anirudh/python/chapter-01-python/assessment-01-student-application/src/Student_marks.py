@@ -39,7 +39,8 @@ class Student:
         highest_student = None
         highest_mark = None
 
-        for name, marks in Student.student_data.items():
+        for name in Student.student_data:
+            marks=self._get_mark(name)
             if highest_mark is None or marks > highest_mark:
                 highest_mark = marks
                 highest_student = name
@@ -52,7 +53,8 @@ class Student:
         '''
         _, avg = self.calculate_total_and_average()
 
-        for name, marks in list(Student.student_data.items()):
+        for name in list(Student.student_data):
+            marks = self._get_mark(name)
             grade = 'P' if marks > avg else 'F'
             Student.student_data[name] = {"marks": marks, "grade": grade}
 
