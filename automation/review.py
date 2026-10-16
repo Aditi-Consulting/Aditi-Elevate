@@ -1,9 +1,20 @@
 """Submission hygiene and human approval handoff. Never executes participant code."""
 import json
-import re
 from urllib.request import Request, urlopen
 
-AREAS = {'python', 'machine-learning', 'deep-learning', 'nlp', 'fastapi', 'langchain', 'langgraph'}
+def blocking_thread(thread):
+    if thread['isResolved']:
+        return False
+    comments = thread.get('comments', {}).get('nodes', [])
+    if comments:
+        first = comments[0]
+        author = first.get('author') or {}
+        if (author.get('__typename') == 'Bot'
+                and author.get('login', '').lower() in {'copilot', 'copilot-pull-request-reviewer', 'copilot-pull-request-reviewer[bot]'}
+                and first['body'].lstrip().startswith('ADVISORY:')):
+            return False
+    # Unclassified/human feedback must be evaluated, never silently dismissed.
+    return True
 
 
 class GitHub:
@@ -42,7 +53,7 @@ class GitHub:
                 repository(owner:$owner,name:$name) {
                   pullRequest(number:$number) {
                     reviewThreads(first:100,after:$cursor) {
-                      nodes { isResolved }
+                      nodes { isResolved comments(first:1) { nodes { body author { login __typename } } } }
                       pageInfo { hasNextPage endCursor }
                     }
                   }
@@ -51,7 +62,7 @@ class GitHub:
             if data.get('errors'):
                 raise RuntimeError('Unable to verify review threads')
             threads = data['data']['repository']['pullRequest']['reviewThreads']
-            if any(not thread['isResolved'] for thread in threads['nodes']):
+            if any(blocking_thread(thread) for thread in threads['nodes']):
                 return True
             if not threads['pageInfo']['hasNextPage']:
                 return False
@@ -66,19 +77,10 @@ def inspect_paths(files, author):
             paths.append(file['previous_filename'])
         for path in paths:
             parts = path.split('/')
-            if len(parts) < 6 or parts[0] != 'participants' or parts[1].lower() != author.lower():
+            if len(parts) < 3 or parts[0] != 'participants' or parts[1].lower() != author.lower():
                 issues.add('Keep all changes within your own assessment folder under participants/<github-username>/.')
                 continue
-            roots.add('/'.join(parts[:5]))
-            if parts[2] not in AREAS:
-                issues.add('Use a documented learning-area folder (for example python or machine-learning).')
-            if not re.fullmatch(r'chapter-\d{2}-[a-z0-9]+(?:-[a-z0-9]+)*', parts[3]):
-                issues.add('Use chapter-NN-name with lowercase words separated by hyphens.')
-            if not re.fullmatch(r'assessment-\d{2}-[a-z0-9]+(?:-[a-z0-9]+)*', parts[4]):
-                issues.add('Use assessment-NN-name with lowercase words separated by hyphens.')
-            if file['status'] != 'removed' and (any(p in {'.venv', 'venv', '__pycache__', 'node_modules', '.env'} for p in parts)
-                                                or path.endswith(('.pyc', '.pyo'))):
-                issues.add('Remove local environments, caches, compiled Python files, and .env files from the submission.')
-    if len(roots) != 1:
-        issues.add('Submit exactly one assessment per pull request.')
+            roots.add('/'.join(parts[:min(5, len(parts) - 1)]))
+            if file['status'] != 'removed' and '.env' in parts:
+                issues.add('Remove committed .env files that may expose credentials; use a credential-free example file.')
     return sorted(issues), roots

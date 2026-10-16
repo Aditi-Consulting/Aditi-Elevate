@@ -50,23 +50,22 @@ def render_report(api, pr, roots, review, report, issues, ready, findings, merge
     elif not ready and not merged_sha:
         if review['state'] != 'APPROVED':
             required.append('Obtain an approving review of the current revision after addressing feedback. COMMENTED is not an approval.')
-        if not report:
-            required.append('Assessment rubric is unavailable. A reviewer must establish the assigned question and requirement-by-requirement result; a general code review is insufficient.')
-        else:
+        if report:
             if report['question_status'] != 'found':
                 required.append('Add the full assigned question to the PR or link the exact same assessment from another PR.')
             if report['needs_execution']:
                 required.append('Supply the missing execution/validation evidence for reviewer verification.')
-        required.append('All required CI checks must pass and all review discussions/change requests must be resolved before merging.')
+        required.append('Required CI checks and material review blockers must be cleared. Clearly marked advisory feedback does not require a code change; repository merge rules still apply.')
     if required:
         body += '\n### Required actions\n\n' + '\n'.join(f'{i}. {display(item)}' for i, item in enumerate(required, 1)) + '\n'
     body += '\n### Grading rubric\n\n'
     if report and report['criteria']:
         body += f'Question source: [PR #{report["source_pr"]}](https://github.com/{api.repo}/pull/{report["source_pr"]}).\n\n'
         body += '| Requirement | Result | Evidence |\n| --- | --- | --- |\n'
-        body += '\n'.join(f'| {display(c["requirement"])} | {c["result"].upper()} | {display(c["evidence"])} |' for c in report['criteria']) + '\n'
+        body += '\n'.join(f'| {display(c["requirement"])} | {c["result"].upper() if c.get("blocking", True) else "ADVISORY — non-blocking"} | {display(c["evidence"])} |' for c in report['criteria']) + '\n'
     else:
-        body += 'Not yet available. No assessment grade has been inferred from the absence of findings.\n'
+        body += 'See the linked review for the assessment decision. A structured rubric table is optional; its absence does not block a valid approving review.\n'
+    findings = [f for f in findings if not f['body'].lstrip().startswith('ADVISORY:')]
     if findings:
         body += '\n### Code review findings\n\n'
         for i, finding in enumerate(findings[:20], 1):
@@ -75,8 +74,8 @@ def render_report(api, pr, roots, review, report, issues, ready, findings, merge
             body += '   > ' + display(text) + (' … (read the linked comment for details)' if len(finding['body']) > 2000 else '') + '\n\n'
         if len(findings) > 20:
             body += 'Additional findings are available in the linked review.\n'
-    body += '\n### Optional improvements\n\n'
-    body += ('\n'.join('- ' + display(s) for s in report['improvements']) if report and report['improvements'] else 'No separate optional suggestions supplied. Review findings above still need reviewer resolution.') + '\n'
+    body += '\n### Optional improvements — not required for approval\n\n'
+    body += ('\n'.join('- ' + display(s) for s in report['improvements'][:2]) if report and report['improvements'] else 'None. No extra polish is required.') + '\n'
     body += '\n---\nThe assistant checks submission paths, review evidence, CI status and merge eligibility. It does not execute participant code. This report applies to the revision above.\n'
     if len(body) > 60000:
         raise RuntimeError('Assessment report exceeds comment limit')
@@ -101,9 +100,10 @@ def merge_approved(api, pr, review, report):
             or parse_report(latest['body']) != report or has_objections(reviews)
             or api.unresolved(number) or not checks_pass(api, sha)):
         return None, 'Merge blocked: current approval, review discussions or CI checks need attention.'
-    source = api.get(f'pulls/{report["source_pr"]}')
-    if not report_passes(report, source['body'] or ''):
-        return None, 'Merge blocked: assignment source or rubric could not be verified.'
+    if report:
+        source = api.get(f'pulls/{report["source_pr"]}')
+        if not report_passes(report, source['body'] or ''):
+            return None, 'Merge blocked: a reported core requirement or assignment source could not be verified.'
     try:
         result = api.request(f'/repos/{api.repo}/pulls/{number}/merge',
                              {'sha': sha, 'merge_method': 'squash',
@@ -138,6 +138,7 @@ def parse_report(body):
             return None
         for criterion in report['criteria']:
             if (criterion['result'] not in {'pass', 'fail', 'unverified'}
+                    or type(criterion.get('blocking', True)) is not bool
                     or not isinstance(criterion['requirement'], str)
                     or not isinstance(criterion['evidence'], str)):
                 return None
@@ -151,8 +152,9 @@ def report_passes(report, source_body):
                 and len(report['question_quote'].strip()) >= 20
                 and report['question_quote'] in source_body
                 and not report['needs_execution'] and report['criteria']
+                and any(c.get('blocking', True) for c in report['criteria'])
                 and all(c['result'] == 'pass' and c['requirement'].strip() and c['evidence'].strip()
-                        for c in report['criteria']))
+                        for c in report['criteria'] if c.get('blocking', True)))
 
 
 def has_objections(reviews):
@@ -189,13 +191,6 @@ def process(api, number, actor, coordinator, request_reviews=False, dry_run=Fals
         raise RuntimeError('Incomplete file list')
     issues, roots = inspect_paths(files, pr['user']['login'])
     sha = pr['head']['sha']
-    tree = api.get(f'git/trees/{sha}?recursive=1')
-    if tree.get('truncated'):
-        raise RuntimeError('Incomplete repository tree')
-    paths = {f['path'] for f in tree['tree'] if f['type'] == 'blob' and f['mode'] != '120000' and f.get('size', 0)}
-    for root in roots:
-        if root + '/README.md' not in paths:
-            issues.append('Include a nonempty assessment README.md with setup, execution, and results.')
     reviews = api.pages(f'pulls/{number}/reviews')
     current = [r for r in reviews if is_copilot(r) and r['commit_id'] == sha and r['state'] != 'PENDING']
     review = max(current, key=lambda r: r['id'], default=None)
@@ -203,7 +198,7 @@ def process(api, number, actor, coordinator, request_reviews=False, dry_run=Fals
     source_body = ''
     if report and report['question_status'] == 'found' and report['source_pr'] > 0:
         source_body = api.get(f'pulls/{report["source_pr"]}')['body'] or ''
-    ready = bool(review and review['state'] == 'APPROVED' and report_passes(report, source_body)
+    ready = bool(review and review['state'] == 'APPROVED' and (report is None or report_passes(report, source_body))
                  and not issues and not has_objections(reviews)
                  and not api.unresolved(number) and checks_pass(api, sha))
     findings = [c for c in api.pages(f'pulls/{number}/comments')

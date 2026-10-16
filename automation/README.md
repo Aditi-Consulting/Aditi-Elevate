@@ -22,22 +22,19 @@ GitHub delivers inbox/optional email notifications according to Anjali's setting
    test check names. Protect automation/instruction files with maintainer review,
    dismiss stale approvals, and require conversation resolution.
 
-The participant PR template requests the full question or an explicit source PR.
-Copilot instructions request a source-grounded grading rubric, file/line evidence,
-and constructive improvements. The assistant accepts a structured report only from
-Copilot's bot review for the current commit. It checks the source quote against
-the referenced PR, requires every criterion to pass, checks structure/README,
-checks CI and unresolved conversations, and requires an actual APPROVED review
-before attempting a merge and notifying Anjali of completion. It never manufactures approval from silence
-or positive prose. Native Copilot approvals do not guarantee the handoff checks
-pass; Anjali should use the latest assessment status before unblocking anyone.
+The participant PR template requests the question or an explicit source PR.
+Copilot reviews core correctness and material security/run issues, with short,
+actionable feedback. A native APPROVED review for the current commit is required;
+COMMENT reviews, positive prose or absence of findings never count as approval.
+Structured rubric tables are optional. When supplied, explicit core failures,
+unverified core requirements or an invalid source question still prevent merging.
+Missing JSON does not create a participant task or prevent a valid native approval.
 
-Copilot output is not a guaranteed structured API. Missing/malformed rubrics and
-unverifiable results stay pending for manual attention. A general code review may
-provide useful feedback without being a complete assessment grade. Missing or
-ambiguous questions identified in its report are highlighted on the PR. Every new
-review result is linked in a coordinator notification; nonpassing results explicitly
-say the participant is NOT cleared. No participant code executes in this workflow.
+The assistant checks ownership, configured CI and unresolved material/unclassified
+feedback before merging. Clearly marked Copilot ADVISORY threads are non-blocking
+for the assistant, subject to repository rules. Reports and coordinator notices
+state whether the participant is merged and ready for the next stage. No participant
+code executes in this workflow.
 
 ## Run against existing PRs
 
@@ -74,15 +71,15 @@ The workflow runs with `--merge-approved` and contents-write permission. A local
 run must also supply `--merge-approved` to perform merges. Dry run never writes or
 merges, even if that flag is supplied.
 
-A passing current-commit Copilot approval and complete rubric are required, along
-with CI success, resolved review feedback and correct submission structure. The
+A current-commit Copilot approval is required, along with CI success, cleared
+material feedback and correct participant ownership. Custom JSON is optional. The
 assistant rechecks these gates immediately before a SHA-bound squash merge. GitHub
 must report a clean, mergeable PR, and existing repository rules remain in effect.
 Squash merging must be enabled. Unknown mergeability, stale commits, revoked
 approvals, conflicts or rejected API requests keep the PR open for attention.
 
 Every changed path, including rename origins, must belong to the PR author's
-`participants/<github-username>/<learning-area>/<chapter>/<assessment>/` folder.
+`participants/<github-username>/` folder. Chapter and assessment naming is advisory.
 The merge preserves these paths on main; it does not move files or modify another
 participant's folder. Wrongly located submissions must be corrected and reviewed
 again before merging. Branches are retained for traceability.
@@ -96,3 +93,31 @@ including the merge commit and a stable link to the participant's merged folder.
 GitHub merge and comment publication are separate operations. If a comment request
 fails after a successful merge, maintainers must confirm the merge and publish the
 handoff manually; a failed notification never rolls back committed work.
+
+
+## Practical review scope
+
+This is a learning assessment, not a production-readiness audit. Block only on
+incorrect core behavior for normal or explicitly required inputs, missing required
+functionality, inability to run the solution, material security issues, or invalid
+ML evaluation. Require concrete evidence and a correction for each blocker.
+Do not require exotic-input hardening unless the assignment calls for it.
+
+Style, formatting, type hints, docstrings, extra test coverage, minor documentation,
+folder spelling below the username, generated caches and alternate architectures
+are not approval gates. README presence alone is not a gate. Participant folder
+ownership and credential protection remain enforced. Optional criteria marked
+`blocking:false` cannot fail the grade; at least one core criterion must pass.
+Older reports without this field retain their original blocking meaning.
+
+Copilot should consolidate all material findings in the first review and check only
+fixes/regressions in subsequent reviews. No inline nitpicks; at most two advisory
+suggestions in the summary. Explicit Copilot ADVISORY threads do not block the
+assistant. Human/unclassified threads and changes-requested reviews still require
+reviewer disposition. Existing branch rules may require resolving advisory threads;
+the assistant does not override those rules or silently dismiss historical comments.
+
+A missing machine-readable report is not an approval gate or a request for
+participant code changes. This policy takes effect in native Copilot reviews
+when the updated instruction file is present in the participant PR head branch.
+Merge the reviewed automation draft and sync participant branches before re-review.

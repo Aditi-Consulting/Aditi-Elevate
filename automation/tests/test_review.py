@@ -1,7 +1,7 @@
 import json
 import unittest
 from unittest.mock import patch
-from automation.review import inspect_paths
+from automation.review import inspect_paths, blocking_thread
 from automation.copilot_review import parse_report, report_passes, has_objections, is_copilot, checks_pass
 
 REPORT = {'question_status': 'found', 'source_pr': 4,
@@ -55,6 +55,36 @@ class Tests(unittest.TestCase):
             self.assertFalse(checks_pass(API(), 'abc'))
 
 from automation.copilot_review import merge_approved, render_report
+
+
+class PracticalPolicyTests(unittest.TestCase):
+    def test_optional_failures_do_not_block(self):
+        advisory = {'requirement': 'Type annotations', 'result': 'fail', 'evidence': 'Optional', 'blocking': False}
+        report = dict(REPORT, criteria=REPORT['criteria'] + [advisory])
+        self.assertTrue(report_passes(report, REPORT['question_quote']))
+        self.assertFalse(report_passes(dict(REPORT, criteria=[advisory]), REPORT['question_quote']))
+
+    def test_minor_folder_and_cache_details_do_not_block(self):
+        files = [{'filename': 'participants/student/pillar-2/chapter01/assignment_1/__pycache__/main.pyc', 'status': 'added'},
+                 {'filename': 'participants/student/other-assignment/main.py', 'status': 'added'}]
+        self.assertEqual(inspect_paths(files, 'student')[0], [])
+
+    def test_credentials_still_block(self):
+        files = [{'filename': 'participants/student/task/.env', 'status': 'added'}]
+        self.assertTrue(inspect_paths(files, 'student')[0])
+
+    def test_only_explicit_bot_advisories_are_nonblocking(self):
+        thread = {'isResolved': False, 'comments': {'nodes': [
+            {'body': 'ADVISORY: consider type hints', 'author': {'login': 'copilot-pull-request-reviewer', '__typename': 'Bot'}}]}}
+        self.assertFalse(blocking_thread(thread))
+        thread['comments']['nodes'][0]['body'] = 'BLOCKER: wrong result for normal input'
+        self.assertTrue(blocking_thread(thread))
+        thread['comments']['nodes'][0]['body'] = 'Please inspect this behavior'
+        self.assertTrue(blocking_thread(thread))
+
+    def test_invalid_blocking_type_is_rejected(self):
+        report = dict(REPORT, criteria=[dict(REPORT['criteria'][0], blocking='false')])
+        self.assertIsNone(parse_report('```elevate-report\n' + json.dumps(report) + '\n```'))
 
 
 class MergeAPI:
@@ -132,6 +162,12 @@ class MergeTests(unittest.TestCase):
         api = MergeAPI()
         api.result = {'merged': False}
         self.assertIsNone(self.run_merge(api)[0])
+
+    def test_native_approval_does_not_require_custom_json(self):
+        api = MergeAPI()
+        api.review['body'] = 'Approved: core assignment requirements are satisfied.'
+        with patch('automation.copilot_review.checks_pass', return_value=True):
+            self.assertEqual(merge_approved(api, api.pr, api.review, None)[0], 'mergedcommit')
 
     def test_report_distinguishes_waiting_from_merged(self):
         api = MergeAPI()
