@@ -9,7 +9,7 @@ This project contains a simple Python script that counts the number of lines in 
 
 ## How to run
 
-```bash
+```powershell
 py .\src\File_lines_count.py
 ```
 
