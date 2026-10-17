@@ -1,6 +1,10 @@
 # File Line Counter
 
 This project contains a simple Python script that counts the number of lines in a text file.
+Write a Python program that: 
+Reads a text file. 
+Counts the number of lines. 
+Handles the case where the file does not exist. 
 
 ## Files
 
