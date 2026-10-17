@@ -4,10 +4,7 @@ This project contains a simple Python function that counts the number of vowels 
 
 
 ##Question
-Write a Python program that: 
-  Reads a text file. 
-  Counts the number of lines. 
-  Handles the case where the file does not exist. 
+Write a Python function named count_vowels(text) that returns the number of vowels in a string. The function should handle both uppercase and lowercase letters. 
 ## Features
 
 - Counts both uppercase and lowercase vowels
