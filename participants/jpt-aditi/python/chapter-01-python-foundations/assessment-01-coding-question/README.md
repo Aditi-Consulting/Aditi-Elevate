@@ -14,10 +14,13 @@ This project implements the transaction summary utility that accepts a list of a
 - Number of transactions above the average. 
 
 The implementation is in `src/transaction.py` and includes a typed return contract using `TypedDict` for clearer return type expectations. It also validates invalid runtime inputs and raises a clear `TypeError` when non-numeric values are provided.
+The total and average are returned as exact `Fraction` values. The demo formats them to two decimal places for display.
 
 The tests are in `tests/test_transaction.py`. 
 
 ## How to run
+
+Requires Python 3.12 or later.
 
 1. Clone the repository and move into the project folder.
 
@@ -34,12 +37,12 @@ The tests are in `tests/test_transaction.py`.
    python -m pip install --upgrade pip
    python -m pip install -r requirements.txt
    ```
-3. Build and Run 
+4. Build and run:
 
    ```bash
-   python src/transaction.py
+   python main.py
    ```
-4. Test:
+5. Test:
 
    ```bash
    python -m pytest -v
@@ -49,7 +52,7 @@ The tests are in `tests/test_transaction.py`.
 ## Validation and results
 
 - All tests passed successfully.
-- The test suite reported: `5 passed in 0.01s`.
+- The test suite reported: `10 passed in 0.01s`.
 
 ## Questions or known limitations 
 None
