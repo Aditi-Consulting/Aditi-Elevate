@@ -1,7 +1,9 @@
 # Vowel Counter
 
 This project contains a simple Python function that counts the number of vowels in a given string.
-#Question
+
+
+##Question
 Write a Python program that: 
   Reads a text file. 
   Counts the number of lines. 
