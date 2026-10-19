@@ -1,6 +1,6 @@
 # Student Performance Analyzer
 
-A command-line Python application that collects student names, user-defined subject names, and marks. It reports each student's mark and grade by subject, total, overall average and grade, plus the highest overall average. Every student is entered with one mark per subject.
+A command-line Python application that collects student names and marks for the predefined subjects python, java, and sql. It reports each student's mark and grade by subject, total, overall average and grade, plus each subject's class total and average and the highest overall average.
 
 ## Requirements
 
@@ -15,7 +15,7 @@ From the project root, run:
 py src/main.py
 ```
 
-The application asks for the number of students and subjects, then asks you to name each subject. Enter each student's name and a mark for every subject. Counts must be positive whole numbers; student and subject names must be non-empty and unique; marks must be numeric values from 0 through 100. Invalid entries are reported and requested again.
+The application asks for the number of students, then asks for each student's name and one mark for python, java, and sql. The student count must be a positive whole number; names must be non-empty and unique; marks must be numeric values from 0 through 100. Invalid entries are reported and requested again.
 
 ## Run the tests
 

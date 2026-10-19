@@ -25,19 +25,6 @@ def read_student_name(existing_names):
             return name
 
 
-def read_subjects(subject_count):
-    subjects = []
-    while len(subjects) < subject_count:
-        subject = input(f"Enter name for subject {len(subjects) + 1}: ").strip()
-        if not subject:
-            print("Subject name cannot be empty.")
-        elif subject.casefold() in {name.casefold() for name in subjects}:
-            print("Subject names must be unique.")
-        else:
-            subjects.append(subject)
-    return subjects
-
-
 def read_marks(subjects):
     marks = []
     while len(marks) < len(subjects):
@@ -56,9 +43,8 @@ def read_marks(subjects):
 
 def main():
     student_count = read_positive_integer("How many students? ")
-    subject_count = read_positive_integer("How many subjects? ")
-    subjects = read_subjects(subject_count)
-    analyzer = Student(subjects)
+    analyzer = Student()
+    subjects = analyzer.subjects
 
     for _ in range(student_count):
         name = read_student_name(analyzer.student_names)
@@ -76,6 +62,10 @@ def main():
                 f"  {subject}: mark={result['subject_marks'][subject]}, "
                 f"grade={result['subject_grades'][subject]}"
             )
+
+    print("\nSubject Summary")
+    for subject, result in analyzer.get_subject_summary().items():
+        print(f"{subject}: total={result['total']}, average={result['average']:.2f}")
 
     names, average = analyzer.get_highest_performers()
     print(f"Highest average: {', '.join(names)} ({average:.2f})")

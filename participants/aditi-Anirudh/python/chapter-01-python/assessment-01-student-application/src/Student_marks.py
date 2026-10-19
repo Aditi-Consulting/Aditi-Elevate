@@ -1,6 +1,8 @@
 from math import isfinite
 from numbers import Real
 
+DEFAULT_SUBJECTS = ("python", "java", "sql")
+
 
 def _validate_marks(marks):
     if not isinstance(marks, (list, tuple)):
@@ -40,7 +42,8 @@ class Student:
         self.student_names = set()
         self.student_name_lookup = {}
         self.marks_per_student = None
-        self.subjects = self._validate_subjects(subjects) if subjects is not None else None
+        subjects = DEFAULT_SUBJECTS if subjects is None else subjects
+        self.subjects = self._validate_subjects(subjects)
 
     @staticmethod
     def _validate_subjects(subjects):
@@ -63,8 +66,6 @@ class Student:
         if not isinstance(marks, (list, tuple)) or not marks:
             raise ValueError("Enter at least one mark")
         _validate_marks(marks)
-        if self.subjects is None:
-            self.subjects = [f"Subject {index + 1}" for index in range(len(marks))]
         if len(marks) != len(self.subjects):
             raise ValueError("Enter one mark for each subject")
         if self.marks_per_student is not None and len(marks) != self.marks_per_student:
@@ -110,6 +111,16 @@ class Student:
             subject: calculate_average([marks[index] for marks in self.student_data.values()])
             for index, subject in enumerate(self.subjects)
         }
+
+    def get_subject_summary(self):
+        summary = {}
+        for index, subject in enumerate(self.subjects):
+            subject_marks = [marks[index] for marks in self.student_data.values()]
+            summary[subject] = {
+                "total": calculate_total(subject_marks),
+                "average": calculate_average(subject_marks),
+            }
+        return summary
 
     def assign_subject_grades(self):
         subject_averages = self.get_subject_averages()

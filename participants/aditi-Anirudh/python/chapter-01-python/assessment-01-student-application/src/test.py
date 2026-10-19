@@ -9,6 +9,11 @@ class TestStudent(unittest.TestCase):
         self.assertEqual(calculate_total([80, 90, 70]), 240)
         self.assertEqual(calculate_total([]), 0)
 
+    def test_default_subjects_are_predefined(self):
+        student = Student()
+        self.assertEqual(student.subjects, ["python", "java", "sql"])
+        student.add_student("Alice", [80, 90, 70])
+
     def test_calculate_average(self):
         self.assertEqual(calculate_average([80, 90, 70]), 80)
 
@@ -74,6 +79,15 @@ class TestStudent(unittest.TestCase):
             self.student.assign_subject_grades()["Alice"],
             {"Subject A": "P", "Subject B": "P"},
         )
+
+    def test_subject_summary_calculates_totals_and_averages(self):
+        self.student.add_student("Alice", [90, 70])
+        self.student.add_student("Bob", [70, 90])
+
+        self.assertEqual(self.student.get_subject_summary(), {
+            "Subject A": {"total": 160, "average": 80},
+            "Subject B": {"total": 160, "average": 80},
+        })
 
     def test_subject_names_must_be_nonempty_and_unique(self):
         with self.assertRaises(ValueError):
