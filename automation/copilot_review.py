@@ -24,24 +24,23 @@ def display(value):
 def render_report(api, pr, roots, review, report, issues, ready, findings, merged_sha=None, merge_note=None):
     participant = pr['user']['login']
     state = 'Merged — assessment complete' if merged_sha else ('Approved — awaiting merge' if ready else 'Action required' if review or issues else 'Review pending')
+    icon = '✅' if merged_sha else '🟢' if ready else '🟠' if review or issues else '⏳'
     body = MARKER + '\n## Aditi Elevate · Assessment report\n\n'
-    body += f'**{state}**\n\n| Detail | Value |\n| --- | --- |\n'
-    body += f'| Participant | {participant} |\n| Submission | {display(pr["title"])} |\n'
-    body += f'| PR | #{pr["number"]} |\n| Reviewed revision | `{pr["head"]["sha"][:12]}` |\n'
-    for root in sorted(roots):
-        ref = merged_sha or pr['head']['sha']
-        body += f'| {"Merged folder" if merged_sha else "Submission folder"} | [{display(root)}](https://github.com/{api.repo}/tree/{ref}/{quote(root, safe="/")}) |\n'
-    if review:
-        body += f'| Review | [{review["state"]}]({review["html_url"]}) |\n'
+    body += f'### {icon} {state}\n\n'
+    body += f'**Participant:** {participant}  \n**Submission:** {display(pr["title"])}  \n'
+    body += f'**PR:** [#{pr["number"]}](https://github.com/{api.repo}/pull/{pr["number"]})\n\n'
     if merged_sha:
-        body += f'| Merge commit | [{merged_sha[:12]}](https://github.com/{api.repo}/commit/{merged_sha}) |\n'
-    body += '\n### Decision and next steps\n\n'
-    if merged_sha:
-        body += '- **Participant:** your approved work is now in `main` under your username. This PR is closed.\n- **Anjali:** the assessment passed the configured review gates and is merged. Unblock the next learning stage.\n'
+        body += '> **Anjali — next action:** Unblock the next learning stage. The approved submission is merged into main.\n\n'
+        body += '**Participant:** assessment complete. No further fixes are requested for this submission.\n'
     elif ready:
-        body += '- **Participant:** grading and submission checks passed; merge is pending.\n- **Anjali:** wait for the merged confirmation before unblocking the next stage.\n'
+        body += '> **Anjali — next action:** wait for the merged confirmation before unblocking the next stage.\n\n'
+        body += '**Participant:** review gates passed; merge is pending.\n'
+    elif review or issues:
+        body += '> **Anjali — next action:** Keep this assessment pending until approval and merge are confirmed.\n\n'
+        body += '**Participant:** address the required actions below. Optional improvements do not block approval.\n'
     else:
-        body += '- **Participant:** address the items below on this PR, then request a new review.\n- **Anjali:** keep the next stage blocked until an approved-and-merged confirmation appears.\n'
+        body += '> **Anjali — next action:** Wait for the assessment review.\n\n'
+        body += '**Participant:** review pending; no code changes are requested by this status report.\n'
     if merge_note:
         body += '\n**Merge status:** ' + display(merge_note) + '\n'
     required = list(issues)
@@ -61,10 +60,12 @@ def render_report(api, pr, roots, review, report, issues, ready, findings, merge
     body += '\n### Grading rubric\n\n'
     if report and report['criteria']:
         body += f'Question source: [PR #{report["source_pr"]}](https://github.com/{api.repo}/pull/{report["source_pr"]}).\n\n'
-        body += '| Requirement | Result | Evidence |\n| --- | --- | --- |\n'
-        body += '\n'.join(f'| {display(c["requirement"])} | {c["result"].upper() if c.get("blocking", True) else "ADVISORY — non-blocking"} | {display(c["evidence"])} |' for c in report['criteria']) + '\n'
+        for criterion in report['criteria']:
+            result = criterion['result'].upper() if criterion.get('blocking', True) else 'ADVISORY — non-blocking'
+            icon = {'PASS': '✅', 'FAIL': '❌', 'UNVERIFIED': '⏳'}.get(result, '💡')
+            body += f'- {icon} **{result} — {display(criterion["requirement"])}**\n  Evidence: {display(criterion["evidence"])}\n'
     else:
-        body += 'See the linked review for the assessment decision. A structured rubric table is optional; its absence does not block a valid approving review.\n'
+        body += 'Detailed assessment evidence is available in the linked review below.\n'
     findings = [f for f in findings if not f['body'].lstrip().startswith('ADVISORY:')]
     if findings:
         body += '\n### Code review findings\n\n'
@@ -76,7 +77,16 @@ def render_report(api, pr, roots, review, report, issues, ready, findings, merge
             body += 'Additional findings are available in the linked review.\n'
     body += '\n### Optional improvements — not required for approval\n\n'
     body += ('\n'.join('- ' + display(s) for s in report['improvements'][:2]) if report and report['improvements'] else 'None. No extra polish is required.') + '\n'
-    body += '\n---\nThe assistant checks submission paths, review evidence, CI status and merge eligibility. It does not execute participant code. This report applies to the revision above.\n'
+    body += '\n### Submission and review details\n\n'
+    for root in sorted(roots):
+        ref = merged_sha or pr['head']['sha']
+        body += f'- **{"Merged folder" if merged_sha else "Submission folder"}:** [{display(root)}](https://github.com/{api.repo}/tree/{ref}/{quote(root, safe="/")})\n'
+    if review:
+        body += f'- **Review evidence:** [{review["state"]}]({review["html_url"]})\n'
+    body += f'- **Reviewed revision:** `{pr["head"]["sha"][:12]}`\n'
+    if merged_sha:
+        body += f'- **Merge commit:** [{merged_sha[:12]}](https://github.com/{api.repo}/commit/{merged_sha})\n'
+    body += '\n---\nValidation scope: submission paths, review evidence, CI status and merge eligibility. The bot does not execute participant code.\n'
     if len(body) > 60000:
         raise RuntimeError('Assessment report exceeds comment limit')
     return body
@@ -237,17 +247,19 @@ def process(api, number, actor, coordinator, request_reviews=False, dry_run=Fals
         key = hashlib.sha256(f'{sha}:{review["id"]}:{ready}:{merged_sha}:{pr["body"]}'.encode()).hexdigest()
         marker = f'<!-- elevate-copilot-notice:{key} -->'
         if not any(c['body'].startswith(marker) for c in trusted):
-            status = 'MERGED — ready for next stage' if merged_sha else 'PENDING — do not unblock yet'
+            status = '✅ Assessment complete — merged' if merged_sha else '🟠 Assessment pending'
             report_url = f'https://github.com/{api.repo}/pull/{number}#issuecomment-{existing["id"]}'
-            notice = (f'{marker}\n@{coordinator} @{pr["user"]["login"]}\n\n'
-                      f'### Assessment update · PR #{number}\n\n'
-                      f'| Detail | Status |\n| --- | --- |\n'
-                      f'| Participant | {pr["user"]["login"]} |\n'
-                      f'| Decision | **{status}** |\n'
-                      f'| Revision | `{sha[:12]}` |\n'
-                      f'| Report | [Read required actions, grading rubric and suggestions]({report_url}) |\n\n')
-            notice += ('**Anjali:** approved work has been merged into the participant’s folder on main. Unblock the next stage.\n'
-                       if merged_sha else '**Participant:** address the required actions in the report. **Anjali:** wait for approved-and-merged confirmation.\n')
+            notice = (f'{marker}\n## Aditi Elevate · Assessment update\n\n'
+                      f'### {status}\n\n'
+                      f'**Participant:** {pr["user"]["login"]}  \n'
+                      f'**Submission:** {display(pr["title"])}  \n'
+                      f'**PR:** [#{number}](https://github.com/{api.repo}/pull/{number})\n\n'
+                      f'@{coordinator} @{pr["user"]["login"]}\n\n')
+            notice += ('> **Anjali — next action:** Unblock the next learning stage.\n\n'
+                       '✅ Review gates passed  \n✅ Merged into the participant’s folder on main  \n✅ No further fixes requested for this submission\n\n'
+                       if merged_sha else '> **Anjali — next action:** Keep this assessment pending until approval and merge are confirmed.\n\n'
+                       '**Participant:** check the required actions in the report. Optional suggestions do not block approval.\n\n')
+            notice += f'[View grading results and review details]({report_url})\n\nReviewed revision: `{sha[:12]}`.\n'
             api.request(f'/repos/{api.repo}/issues/{number}/comments', {'body': notice})
     print(f'PR #{number}: {"merged" if merged_sha else "pending / needs attention"}')
 
