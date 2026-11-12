@@ -1,0 +1,36 @@
+# Python virtual environments
+.venv/
+venv/
+env/
+
+# Python cache and build artifacts
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Jupyter / notebooks
+.ipynb_checkpoints/
+
+# Editor / OS clutter
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Project-local scratch output
+logs/
+output/
+*.log
+
+# Local environment files
+.env
+.env.*
+
+# Keep the dataset tracked unless you intentionally want to exclude it.
+# data/
