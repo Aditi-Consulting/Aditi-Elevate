@@ -82,6 +82,35 @@ def compute_metrics(y_true, y_pred, y_proba) -> Dict[str, float]:
     }
 
 
+def confusion_counts(y_true, y_pred) -> Dict[str, int]:
+    """Exact confusion-matrix counts: true/false negatives and positives."""
+    y_true, y_pred = np.asarray(y_true), np.asarray(y_pred)
+    return {
+        "tn": int(((y_true == 0) & (y_pred == 0)).sum()),
+        "fp": int(((y_true == 0) & (y_pred == 1)).sum()),
+        "fn": int(((y_true == 1) & (y_pred == 0)).sum()),
+        "tp": int(((y_true == 1) & (y_pred == 1)).sum()),
+    }
+
+
+def threshold_for_recall(y_true, y_proba, target_recall: float) -> float:
+    """Highest decision threshold whose recall is at least ``target_recall``.
+
+    A higher threshold flags fewer customers, so picking the highest one that still
+    reaches the target keeps false alarms as low as possible.
+    """
+    if not 0 < target_recall <= 1:
+        raise ValueError("target_recall must be in (0, 1]")
+    y_true, y_proba = np.asarray(y_true), np.asarray(y_proba)
+    positives = y_true == 1
+    if not positives.any():
+        raise ValueError("y_true contains no positive samples")
+    for t in np.unique(y_proba)[::-1]:
+        if (y_proba[positives] >= t).mean() >= target_recall:
+            return float(t)
+    return float(y_proba.min())
+
+
 def top_features(model, feature_names, n: int = 8) -> List[Tuple[str, float]]:
     """Most influential features: coefficients for linear models, importances for trees."""
     if hasattr(model, "coef_"):

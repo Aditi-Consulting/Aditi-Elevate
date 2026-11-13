@@ -7,7 +7,8 @@ import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 from churn_utils import (build_preprocessor, check_data_quality, clean_data,  # noqa: E402
-                         compute_metrics, load_data, split_features_target)
+                         compute_metrics, confusion_counts, load_data,
+                         split_features_target, threshold_for_recall)
 
 
 @pytest.fixture
@@ -60,3 +61,19 @@ def test_compute_metrics_perfect_and_worst():
     perfect = compute_metrics([0, 1, 1, 0], [0, 1, 1, 0], [0.1, 0.9, 0.8, 0.2])
     assert all(v == 1.0 for v in perfect.values())
     assert compute_metrics([0, 1], [1, 0], [0.9, 0.1])["accuracy"] == 0.0
+
+
+def test_confusion_counts_exact():
+    counts = confusion_counts([1, 1, 0, 0, 1, 0], [1, 0, 0, 1, 1, 0])
+    assert counts == {"tn": 2, "fp": 1, "fn": 1, "tp": 2}
+
+
+def test_threshold_for_recall_picks_highest_threshold_meeting_target():
+    y = [1, 1, 1, 1, 0, 0]
+    p = [0.9, 0.8, 0.6, 0.4, 0.5, 0.1]
+    assert threshold_for_recall(y, p, 0.5) == 0.8   # 2 of 4 churners caught
+    assert threshold_for_recall(y, p, 1.0) == 0.4   # all churners caught
+    with pytest.raises(ValueError):
+        threshold_for_recall(y, p, 0)
+    with pytest.raises(ValueError):
+        threshold_for_recall([0, 0], [0.1, 0.2], 0.8)
