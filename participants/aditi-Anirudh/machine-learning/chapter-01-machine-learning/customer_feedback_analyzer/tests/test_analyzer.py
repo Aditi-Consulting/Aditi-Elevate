@@ -2,7 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from analyzer import (
+from src.analyzer import (
     analyze_feedback,
     clean_text,
     classify_sentiment,
@@ -54,7 +54,7 @@ class AnalyzerTests(unittest.TestCase):
             self.assertTrue((output_dir / "entity_distribution.png").is_file())
 
     def test_load_feedback_accepts_wrapped_text_and_location_columns(self):
-        from analyzer import load_feedback
+        from src.analyzer import load_feedback
 
         with tempfile.TemporaryDirectory() as temp_dir:
             source = Path(temp_dir) / "feedback.csv"

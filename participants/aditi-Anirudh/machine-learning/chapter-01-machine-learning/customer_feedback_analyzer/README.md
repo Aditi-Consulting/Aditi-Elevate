@@ -21,13 +21,13 @@ If PowerShell blocks activation, run the interpreter directly instead:
 ## Run
 
 ```powershell
-python analyzer.py
+python src/analyzer.py
 ```
 
 By default, the application reads `data/sentiment-analysis.csv` and writes `output/analyzed_feedback.csv`, `output/sentiment_distribution.png`, and `output/entity_distribution.png`. Choose different paths with:
 
 ```powershell
-python analyzer.py --input path\to\feedback.csv --output-dir path\to\results
+python src/analyzer.py --input path\to\feedback.csv --output-dir path\to\results
 ```
 
 The input CSV must have a `feedback`, `text`, or `review` column. A `product` column is optional; its values are used to find product names in the feedback. If a `location` column is present, location frequencies are shown in the entity chart. If a `sentiment` column is present, its original labels are preserved in the results for comparison; the analyzer still calculates its own sentiment labels. The reader also supports the updated dataset's format, where each whole CSV record is wrapped in quotes.
@@ -51,5 +51,5 @@ The input CSV must have a `feedback`, `text`, or `review` column. A `product` co
 ## Tests
 
 ```powershell
-python -m unittest discover -s tests -v
+python -m unittest tests.test_analyzer -v
 ```
