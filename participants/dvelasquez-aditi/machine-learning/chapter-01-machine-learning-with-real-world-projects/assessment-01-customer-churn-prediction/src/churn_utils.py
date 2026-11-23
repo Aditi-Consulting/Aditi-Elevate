@@ -111,6 +111,17 @@ def threshold_for_recall(y_true, y_proba, target_recall: float) -> float:
     return float(y_proba.min())
 
 
+def select_best_model(cv_metrics: Dict[str, Dict[str, float]]) -> str:
+    """Name of the best model from *training-only* cross-validated metrics.
+
+    ROC-AUC is threshold-independent and robust to class imbalance; F1 breaks ties.
+    Must never be given test-set metrics, or the holdout stops being unbiased.
+    """
+    if not cv_metrics:
+        raise ValueError("cv_metrics is empty")
+    return max(cv_metrics, key=lambda name: (cv_metrics[name]["roc_auc"], cv_metrics[name]["f1"]))
+
+
 def top_features(model, feature_names, n: int = 8) -> List[Tuple[str, float]]:
     """Most influential features: coefficients for linear models, importances for trees."""
     if hasattr(model, "coef_"):

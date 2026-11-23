@@ -29,7 +29,7 @@ pip install -r requirements.txt
 ```bash
 python src/generate_data.py          # optional: recreate data/customers.csv
 python src/train.py                  # or: python src/train.py path/to/your.csv
-python src/train.py --target-recall 0.85   # also tune thresholds for 85% recall
+python src/train.py --target-recall 0.85   # also tune the threshold for 85% recall
 python -m pytest -q                  # unit tests
 ```
 To use another dataset, supply a CSV with a binary `churn` column (0/1) and an
@@ -48,21 +48,39 @@ optional `customer_id` column; other columns are treated as features.
 5. **Split:** 80/20 train/test, stratified on the target, fixed seed.
 6. **Models:** Logistic Regression and Random Forest, both with balanced class weights
    because churners are the minority class (about 31%).
-7. **Metrics:** accuracy, precision, recall, F1 and ROC-AUC on the test set, plus exact
-   confusion-matrix counts. An optional recall-targeted decision threshold is available.
+7. **Model selection (training data only):** both models are compared with 5-fold
+   cross-validation on the training set, using accuracy, precision, recall, F1, ROC-AUC
+   and exact confusion counts. The best model (highest cross-validated ROC-AUC, F1 as
+   tie-break) is chosen by `select_best_model` and **frozen**.
+8. **Final evaluation (test set, once):** only the selected model is fitted on the
+   training set and evaluated once on the held-out test set. The test set plays no part
+   in choosing between models, so the reported performance is an unbiased estimate.
+9. **Optional threshold tuning:** a recall-targeted decision threshold, chosen from the
+   same training-only out-of-fold predictions (see below).
 
 ## Results
-Run on the included synthetic data (400 test rows):
+Run on the included synthetic data (1,600 training rows, 400 test rows).
+
+**Step 1 — model comparison, 5-fold cross-validation on the training data:**
 
 | Model | Accuracy | Precision | Recall | F1 | ROC-AUC |
 | --- | --- | --- | --- | --- | --- |
-| Logistic Regression | 0.698 | 0.505 | 0.764 | 0.608 | 0.802 |
-| Random Forest | 0.735 | 0.556 | 0.691 | 0.616 | 0.795 |
+| Logistic Regression | 0.706 | 0.514 | 0.729 | 0.603 | 0.778 |
+| Random Forest | 0.691 | 0.496 | 0.639 | 0.558 | 0.748 |
+
+Logistic Regression is selected and frozen here, before the test set is touched.
+
+**Step 2 — final evaluation of Logistic Regression on the test set (evaluated once):**
+
+| Accuracy | Precision | Recall | F1 | ROC-AUC |
+| --- | --- | --- | --- | --- |
+| 0.698 | 0.505 | 0.764 | 0.608 | 0.802 |
 
 ## Selected model and explanation
-**Logistic Regression** is selected. It has the highest ROC-AUC, which does not depend
-on a decision threshold and suits an imbalanced target. It also has the higher recall
-(0.76 vs 0.69), and for churn recall is the metric that matters most.
+**Logistic Regression** is selected from the training-only cross-validation. It has the
+highest ROC-AUC (0.778 vs 0.748), which does not depend on a decision threshold and suits
+an imbalanced target. It also has the higher recall (0.73 vs 0.64), and for churn recall
+is the metric that matters most.
 
 **Why recall matters more than precision for churn.** The two errors do not cost the same:
 - A *false negative* (a churner we miss) means the customer leaves and we lose all of
@@ -77,48 +95,44 @@ churners as possible and accept some extra false alarms. Precision still matters
 retention budgets are limited and flagging everyone is not a strategy, so F1 and
 precision are monitored as guard rails rather than as the goal.
 
-**What the numbers mean here.** Exact confusion counts on the 400-row test set
-(123 churners, 277 loyal customers), at the default 0.5 threshold:
+**What the numbers mean here.** Exact confusion counts from the cross-validation on the
+1,600 training rows (490 churners, 1,110 loyal customers), at the default 0.5 threshold:
 
 | Model | Churners caught (TP) | Churners missed (FN) | False alarms (FP) | Loyal kept (TN) |
 | --- | --- | --- | --- | --- |
-| Logistic Regression | 94 | 29 | 92 | 185 |
-| Random Forest | 85 | 38 | 68 | 209 |
+| Logistic Regression | 357 | 133 | 337 | 773 |
+| Random Forest | 313 | 177 | 318 | 792 |
 
-Logistic Regression catches 9 more churners than Random Forest at the cost of 24 more
-false alarms. The extra recall is worth it when saving one churner is worth more than
-about 2.7 retention offers (24 / 9). That holds for most subscription businesses, where a
-customer's lifetime value is far larger than the cost of an offer, even after allowing
-for offers that do not work. Random Forest would be the better pick only if retention
-actions were expensive or the retention team could not handle the extra volume.
-
-These cost ratios are an assumption, since no real cost data was provided.
+Logistic Regression catches 44 more churners than Random Forest at the cost of only 19
+more false alarms. That is a very favourable trade: the extra recall pays off as long as
+saving one churner is worth more than about 0.4 retention offers (19 / 44), which holds
+for essentially any subscription business. Random Forest would be the better pick only if
+retention actions were extremely expensive. These cost ratios are an assumption, since no
+real cost data was provided.
 
 ### Threshold tuning for recall
-The default 0.5 threshold is not tied to the business goal. `--target-recall` tunes each
-model's threshold to reach a recall target. The threshold is chosen on out-of-fold
-predictions from the **training** data and only then applied to the test set, so the test
-set is not used for tuning.
+The default 0.5 threshold is not tied to the business goal. `--target-recall` tunes the
+**selected** model's threshold to reach a recall target. The threshold is chosen on
+out-of-fold predictions from the **training** data, the same data used for model
+selection, and only then applied to the test set. The test set is never used for tuning
+or selection.
 
 ```bash
 python src/train.py --target-recall 0.85
 ```
 
-Result with a target of 0.85 (tuned thresholds 0.35 and 0.33):
+Final test-set evaluation of Logistic Regression at both operating points (both fixed
+before looking at the test set):
 
-| Model | Threshold | Precision | Recall | F1 | TP | FN | FP | TN |
+| Operating point | Threshold | Precision | Recall | F1 | TP | FN | FP | TN |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Logistic Regression | 0.354 | 0.431 | 0.894 | 0.582 | 110 | 13 | 145 | 132 |
-| Random Forest | 0.332 | 0.427 | 0.927 | 0.585 | 114 | 9 | 153 | 124 |
+| Default | 0.500 | 0.505 | 0.764 | 0.608 | 94 | 29 | 92 | 185 |
+| Tuned for recall ≥ 0.85 | 0.354 | 0.431 | 0.894 | 0.582 | 110 | 13 | 145 | 132 |
 
-Lowering the threshold raises recall for both models (0.76 to 0.89 for Logistic
-Regression) and misses far fewer churners (29 down to 13). The price is more false alarms
-(92 up to 145), which is the precision-for-recall trade-off argued above. Once both
-models are tuned to the same recall goal they perform almost the same: Random Forest
-catches 4 more churners for 8 more false alarms, a much smaller gap than at 0.5.
-Recall on the test set lands above the 0.85 target for both models because the threshold
-was fitted on training data, so some variation is expected. The selection still stands:
-Logistic Regression has the higher ROC-AUC and is easier to explain.
+Lowering the threshold raises recall (0.76 to 0.89) and misses far fewer churners
+(29 down to 13). The price is more false alarms (92 up to 145), which is the
+precision-for-recall trade-off argued above. Recall on the test set lands above the 0.85
+target because the threshold was fitted on training data, so some variation is expected.
 
 The coefficients are directly interpretable. Churn risk goes up with
 month-to-month contracts (+0.89), more support calls (+0.54), higher monthly
@@ -126,14 +140,14 @@ charges (+0.45) and electronic-check payment (+0.41). It goes down with two-year
 contracts (-0.80) and longer tenure (-0.61).
 
 ## Testing
-`python -m pytest -q` runs 8 tests covering `load_data`, `check_data_quality`,
+`python -m pytest -q` runs 9 tests covering `load_data`, `check_data_quality`,
 `clean_data`, `split_features_target`, `build_preprocessor`, `compute_metrics`,
-`confusion_counts` and `threshold_for_recall`.
+`confusion_counts`, `threshold_for_recall` and `select_best_model`.
 All pass.
 
 ## Limitations
 - The dataset is **synthetic**, generated by `generate_data.py` with churn driven by a
   known formula. The metrics show the pipeline works, not real-world performance.
-- Single train/test split with no cross-validation or hyperparameter tuning.
-- The ROC-AUC gap between the models (0.802 vs 0.795) is small and is within the noise
-  of a 400-row test set.
+- Models use fixed hyperparameters; there is no hyperparameter search. Cross-validation is
+  used only for model selection and threshold tuning.
+- The test set has 400 rows (123 churners), so test metrics carry a few points of noise.

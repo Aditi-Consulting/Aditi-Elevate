@@ -8,7 +8,8 @@ import pytest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 from churn_utils import (build_preprocessor, check_data_quality, clean_data,  # noqa: E402
                          compute_metrics, confusion_counts, load_data,
-                         split_features_target, threshold_for_recall)
+                         select_best_model, split_features_target,
+                         threshold_for_recall)
 
 
 @pytest.fixture
@@ -77,3 +78,12 @@ def test_threshold_for_recall_picks_highest_threshold_meeting_target():
         threshold_for_recall(y, p, 0)
     with pytest.raises(ValueError):
         threshold_for_recall([0, 0], [0.1, 0.2], 0.8)
+
+
+def test_select_best_model_uses_roc_auc_then_f1():
+    cv = {"a": {"roc_auc": 0.80, "f1": 0.50}, "b": {"roc_auc": 0.82, "f1": 0.40}}
+    assert select_best_model(cv) == "b"
+    tie = {"a": {"roc_auc": 0.80, "f1": 0.50}, "b": {"roc_auc": 0.80, "f1": 0.60}}
+    assert select_best_model(tie) == "b"
+    with pytest.raises(ValueError):
+        select_best_model({})
