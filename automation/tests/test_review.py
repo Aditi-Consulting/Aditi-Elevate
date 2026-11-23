@@ -187,7 +187,7 @@ class MergeTests(unittest.TestCase):
         self.assertNotIn('Unblock the next learning stage', pending)
         self.assertIn('Merged — assessment complete', merged)
         self.assertIn('/tree/mergedcommit/participants/student/', merged)
-        self.assertIn('| Requirement | Result | Evidence |', merged)
+        self.assertIn('✅ **PASS —', merged)
 
 
 if __name__ == '__main__':
