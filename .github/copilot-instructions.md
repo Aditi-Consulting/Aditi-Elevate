@@ -37,7 +37,16 @@ did not execute it. No arbitrary numeric thresholds.
 Provide useful improvements even for passing work. Optional improvements are not
 failures. Keep feedback specific and actionable with file/line references.
 
-Include a human-readable grading rubric and an `elevate-report` fenced JSON block
+Format the human-readable review for GitHub notification emails: start with a
+short status heading (✅ core requirements met, 🟠 changes needed, or ⏳ clarification
+needed), followed by the participant and assessment. Use a short bullet checklist
+for the grading rubric, with PASS/FAIL/UNVERIFIED labels and supporting evidence.
+Avoid wide Markdown tables, decorative images, and long policy paragraphs. Put
+required actions before optional suggestions, and revision/validation details last.
+Do not claim a PR is merged or tell Anjali to unblock it in a review; the confirmed
+merge notification handles that handoff. Never invent executed tests or scores.
+
+Include the human-readable grading rubric and an `elevate-report` fenced JSON block
 in the review overview using this shape (replace every example value):
 
 ```elevate-report
