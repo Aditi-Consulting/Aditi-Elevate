@@ -1,0 +1,11 @@
+Order_ID,Date,Product,Category,Quantity,Unit_Price,Region
+1001,2026-10-01,Laptop,Electronics,1.0,950.0,North
+1002,2026-10-02,Mouse,Accessories,2.0,25.5,South
+1003,2026-10-03,Keyboard,Accessories,1.0,75.0,East
+1004,2026-10-04,,Electronics,3.0,300.0,West
+1005,2026-10-05,Monitor,Electronics,,220.0,North
+1006,2026-10-06,USB-C Hub,Accessories,4.0,,East
+1007,2026-10-07,Webcam,,1.0,60.0,South
+1008,2026-10-08,Headphones,Accessories,2.0,110.0,
+1009,2026-10-09,Laptop,Electronics,1.0,950.0,West
+1010,2026-10-10,,Accessories,5.0,15.0,North
