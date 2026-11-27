@@ -1,0 +1,2 @@
+AI/ML stands for Artificial Intelligence/Machine Learning.
+Deep Learning is subset of AI/ML.
